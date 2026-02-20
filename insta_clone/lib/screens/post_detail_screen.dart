@@ -1,10 +1,9 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
-import '../models/post_model.dart';
-import 'comments_screen.dart';
-import 'package:uuid/uuid.dart';
-import '../models/post_model.dart';
 
+import 'package:flutter/material.dart';
+
+import '../models/post_model.dart';
+import 'comments_screen.dart'; // Make sure this import path is correct
 
 class PostDetailScreen extends StatefulWidget {
   final PostModel post;
@@ -43,8 +42,8 @@ class _PostDetailScreenState extends State<PostDetailScreen>
   void _toggleLike() {
     setState(() {
       widget.post.isLiked = !widget.post.isLiked;
-      widget.post.likes += widget.post.isLiked ? 1 : -1;
-      if (widget.post.likes < 0) widget.post.likes = 0;
+      widget.post.likeCount += widget.post.isLiked ? 1 : -1;
+      if (widget.post.likeCount < 0) widget.post.likeCount = 0;
     });
     widget.onUpdated();
   }
@@ -69,7 +68,7 @@ class _PostDetailScreenState extends State<PostDetailScreen>
         ),
       ),
     );
-    setState(() {}); // refresh counts after returning
+    setState(() {}); // Refresh UI after returning from comments
   }
 
   @override
@@ -78,12 +77,12 @@ class _PostDetailScreenState extends State<PostDetailScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(post.username),
+        title: Text(post.username ?? 'User'),
         centerTitle: true,
       ),
       body: ListView(
         children: [
-          // Image + double tap heart
+          // Image + double tap to like
           GestureDetector(
             onDoubleTap: _doubleTapLike,
             child: Stack(
@@ -92,68 +91,79 @@ class _PostDetailScreenState extends State<PostDetailScreen>
                 AspectRatio(
                   aspectRatio: 1,
                   child: Image.file(
-                    File(post.imagePath),
+                    File(post.imagePath ?? ''),
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (context, error, stackTrace) => Container(
                       color: Colors.grey.shade200,
-                      child: const Center(child: Icon(Icons.broken_image, size: 50)),
+                      child: const Center(
+                        child: Icon(Icons.broken_image, size: 60),
+                      ),
                     ),
                   ),
                 ),
                 if (_showBigHeart)
                   ScaleTransition(
-                    scale: Tween<double>(begin: 0.6, end: 1.2).animate(
-                      CurvedAnimation(parent: _heartController, curve: Curves.easeOutBack),
+                    scale: Tween<double>(begin: 0.0, end: 1.4).animate(
+                      CurvedAnimation(
+                        parent: _heartController,
+                        curve: Curves.easeOutBack,
+                      ),
                     ),
-                    child: Icon(
+                    child: const Icon(
                       Icons.favorite,
-                      size: 110,
-                      color: Colors.white.withOpacity(0.9),
+                      size: 120,
+                      color: Colors.white70,
                     ),
                   ),
               ],
             ),
           ),
 
-          // Actions row
+          // Action buttons row
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             child: Row(
               children: [
                 IconButton(
                   onPressed: _toggleLike,
                   icon: Icon(
                     post.isLiked ? Icons.favorite : Icons.favorite_border,
-                    color: post.isLiked ? Colors.red : Colors.black,
-                    size: 28,
+                    color: post.isLiked ? Colors.red : Colors.black87,
+                    size: 30,
                   ),
                 ),
                 IconButton(
                   onPressed: _openComments,
-                  icon: const Icon(Icons.chat_bubble_outline, size: 26),
+                  icon: const Icon(Icons.chat_bubble_outline, size: 28),
                 ),
                 IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.send_outlined, size: 26),
+                  onPressed: () {}, // share functionality
+                  icon: const Icon(Icons.send_outlined, size: 28),
                 ),
                 const Spacer(),
                 IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.bookmark_border, size: 26),
+                  onPressed: () {}, // bookmark/save
+                  icon: const Icon(Icons.bookmark_border, size: 28),
                 ),
               ],
             ),
           ),
 
-          // Likes + caption
+          // Likes count
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              '${post.likes} likes',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              '${post.likeCount} likes',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
             ),
           ),
+
           const SizedBox(height: 6),
+
+          // Username + caption
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: RichText(
@@ -161,7 +171,7 @@ class _PostDetailScreenState extends State<PostDetailScreen>
                 style: const TextStyle(color: Colors.black, fontSize: 14),
                 children: [
                   TextSpan(
-                    text: '${post.username} ',
+                    text: '${post.username ?? 'User'} ',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   TextSpan(text: post.caption),
@@ -170,9 +180,9 @@ class _PostDetailScreenState extends State<PostDetailScreen>
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
-          // View comments
+          // Comments teaser
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: GestureDetector(
@@ -181,14 +191,17 @@ class _PostDetailScreenState extends State<PostDetailScreen>
                 post.comments.isEmpty
                     ? 'Add a comment...'
                     : 'View all ${post.comments.length} comments',
-                style: TextStyle(color: Colors.grey.shade700),
+                style: TextStyle(
+                  color: Colors.grey.shade700,
+                  fontSize: 14,
+                ),
               ),
             ),
           ),
 
-          const SizedBox(height: 18),
+          const SizedBox(height: 24),
         ],
       ),
     );
   }
-}
+} 
