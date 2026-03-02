@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'upload_post_screen.dart';
 import '../services/feed_service.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
+import 'profile_screen.dart';
+import 'edit_profile_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -409,89 +412,120 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildProfileScreen() {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: Column(
-        children: [
-          const SizedBox(height: 20),
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFF9500), Color(0xFFFFAB76), Color(0xFFFF6B6B)],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFFF9500).withOpacity(0.35),
-                  blurRadius: 30,
-                  offset: const Offset(0, 15),
-                ),
-              ],
-            ),
-            child: const Icon(Icons.person, size: 60, color: Colors.white),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'Your Name',
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '@username • Digital Creator',
-            style: TextStyle(
-              fontSize: 15,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildStatCard('Posts', '127'),
-              _buildStatCard('Followers', '2.5K'),
-              _buildStatCard('Following', '312'),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 40),
-            height: 50,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFF9500), Color(0xFFFFAB76)],
-              ),
-              borderRadius: BorderRadius.circular(25),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFFF9500).withOpacity(0.35),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: const Center(
-              child: Text(
-                'Edit Profile',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 32),
-          _buildProfileGrid(),
-        ],
-      ),
-    );
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+
+  if (uid == null) {
+    return const Center(child: Text("User not logged in"));
   }
+
+  return FutureBuilder(
+    future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      }
+
+      if (!snapshot.hasData || !snapshot.data!.exists) {
+        return const Center(child: Text("No profile data found"));
+      }
+
+      final data = snapshot.data!.data() as Map<String, dynamic>;
+
+      final username = data['username'] ?? 'Your Name';
+      final bio = data['bio'] ?? '';
+      final photoUrl = data['photoUrl'];
+
+      return SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
+
+            // PROFILE IMAGE
+            CircleAvatar(
+              radius: 60,
+              backgroundColor: Colors.grey.shade200,
+              backgroundImage: photoUrl != null && photoUrl != ""
+                  ? NetworkImage(photoUrl)
+                  : null,
+              child: photoUrl == null || photoUrl == ""
+                  ? const Icon(Icons.person, size: 60)
+                  : null,
+            ),
+
+            const SizedBox(height: 20),
+
+            // USERNAME
+            Text(
+              username,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            // BIO
+            if (bio.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
+                child: Text(
+                  bio,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+              ),
+
+            const SizedBox(height: 24),
+
+            // EDIT PROFILE BUTTON
+            InkWell(
+              borderRadius: BorderRadius.circular(25),
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const EditProfileScreen(),
+                  ),
+                );
+
+                setState(() {}); // refresh after returning
+              },
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 40),
+                height: 50,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFF9500), Color(0xFFFFAB76)],
+                  ),
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: const Center(
+                  child: Text(
+                    'Edit Profile',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            _buildProfileGrid(),
+          ],
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildStatCard(String label, String value) {
     return Container(

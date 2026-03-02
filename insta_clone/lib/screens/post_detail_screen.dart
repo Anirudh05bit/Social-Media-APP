@@ -1,9 +1,12 @@
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../models/post_model.dart';
-import 'comments_screen.dart'; // Make sure this import path is correct
+import '../services/like_service.dart';
+import 'comments_screen.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final PostModel post;
@@ -24,6 +27,10 @@ class _PostDetailScreenState extends State<PostDetailScreen>
   late AnimationController _heartController;
   bool _showBigHeart = false;
 
+  final LikeService _likeService = LikeService();
+
+  String get _postId => widget.post.postId;
+
   @override
   void initState() {
     super.initState();
@@ -39,19 +46,25 @@ class _PostDetailScreenState extends State<PostDetailScreen>
     super.dispose();
   }
 
-  void _toggleLike() {
-    setState(() {
-      widget.post.isLiked = !widget.post.isLiked;
-      widget.post.likeCount += widget.post.isLiked ? 1 : -1;
-      if (widget.post.likeCount < 0) widget.post.likeCount = 0;
-    });
+  Future<void> _toggleLikeFirestore() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please login before liking.")),
+      );
+      return;
+    }
+
+    await _likeService.toggleLike(_postId);
     widget.onUpdated();
   }
 
-  void _doubleTapLike() {
-    if (!widget.post.isLiked) {
-      _toggleLike();
+  Future<void> _doubleTapLikeFirestore(bool isLiked) async {
+    // Only like on double tap if not already liked
+    if (!isLiked) {
+      await _toggleLikeFirestore();
     }
+
     setState(() => _showBigHeart = true);
     _heartController.forward(from: 0).whenComplete(() {
       if (mounted) setState(() => _showBigHeart = false);
@@ -68,7 +81,43 @@ class _PostDetailScreenState extends State<PostDetailScreen>
         ),
       ),
     );
-    setState(() {}); // Refresh UI after returning from comments
+
+    // Refresh UI after returning from comments
+    setState(() {});
+  }
+
+  Widget _buildPostImage() {
+    final post = widget.post;
+
+    // ✅ Prefer Firebase imageUrl if available
+    if (post.imageUrl != null && post.imageUrl!.isNotEmpty) {
+      return Image.network(
+        post.imageUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          color: Colors.grey.shade200,
+          child: const Center(child: Icon(Icons.broken_image, size: 60)),
+        ),
+      );
+    }
+
+    // ✅ Otherwise try local file preview
+    if (post.imagePath != null && post.imagePath!.isNotEmpty) {
+      return Image.file(
+        File(post.imagePath!),
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          color: Colors.grey.shade200,
+          child: const Center(child: Icon(Icons.broken_image, size: 60)),
+        ),
+      );
+    }
+
+    // ✅ Fallback
+    return Container(
+      color: Colors.grey.shade200,
+      child: const Center(child: Icon(Icons.broken_image, size: 60)),
+    );
   }
 
   @override
@@ -80,128 +129,134 @@ class _PostDetailScreenState extends State<PostDetailScreen>
         title: Text(post.username ?? 'User'),
         centerTitle: true,
       ),
-      body: ListView(
-        children: [
-          // Image + double tap to like
-          GestureDetector(
-            onDoubleTap: _doubleTapLike,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                AspectRatio(
-                  aspectRatio: 1,
-                  child: Image.file(
-                    File(post.imagePath ?? ''),
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: Colors.grey.shade200,
-                      child: const Center(
-                        child: Icon(Icons.broken_image, size: 60),
+      body: StreamBuilder<bool>(
+        stream: _likeService.isLikedStream(_postId),
+        builder: (context, likedSnap) {
+          final isLiked = likedSnap.data ?? false;
+
+          return ListView(
+            children: [
+              // ✅ Image + double tap to like (Firestore)
+              GestureDetector(
+                onDoubleTap: () => _doubleTapLikeFirestore(isLiked),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    AspectRatio(
+                      aspectRatio: 1,
+                      child: _buildPostImage(),
+                    ),
+                    if (_showBigHeart)
+                      ScaleTransition(
+                        scale: Tween<double>(begin: 0.0, end: 1.4).animate(
+                          CurvedAnimation(
+                            parent: _heartController,
+                            curve: Curves.easeOutBack,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.favorite,
+                          size: 120,
+                          color: Colors.white70,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              // ✅ Action buttons row
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: _toggleLikeFirestore,
+                      icon: Icon(
+                        isLiked ? Icons.favorite : Icons.favorite_border,
+                        color: isLiked ? Colors.red : Colors.black87,
+                        size: 30,
                       ),
                     ),
-                  ),
+                    IconButton(
+                      onPressed: _openComments,
+                      icon: const Icon(Icons.chat_bubble_outline, size: 28),
+                    ),
+                    IconButton(
+                      onPressed: () {}, // share functionality
+                      icon: const Icon(Icons.send_outlined, size: 28),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () {}, // bookmark/save
+                      icon: const Icon(Icons.bookmark_border, size: 28),
+                    ),
+                  ],
                 ),
-                if (_showBigHeart)
-                  ScaleTransition(
-                    scale: Tween<double>(begin: 0.0, end: 1.4).animate(
-                      CurvedAnimation(
-                        parent: _heartController,
-                        curve: Curves.easeOutBack,
+              ),
+
+              // ✅ Likes count (real-time from Firestore)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: StreamBuilder<int>(
+                  stream: _likeService.likeCountStream(_postId),
+                  builder: (context, countSnap) {
+                    final likeCount = countSnap.data ?? post.likeCount;
+
+                    return Text(
+                      '$likeCount likes',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
                       ),
+                    );
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 6),
+
+              // Username + caption
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: RichText(
+                  text: TextSpan(
+                    style: const TextStyle(color: Colors.black, fontSize: 14),
+                    children: [
+                      TextSpan(
+                        text: '${post.username ?? 'User'} ',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      TextSpan(text: post.caption ?? ''),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Comments teaser (still local for now)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: GestureDetector(
+                  onTap: _openComments,
+                  child: Text(
+                    post.comments.isEmpty
+                        ? 'Add a comment...'
+                        : 'View all ${post.comments.length} comments',
+                    style: TextStyle(
+                      color: Colors.grey.shade700,
+                      fontSize: 14,
                     ),
-                    child: const Icon(
-                      Icons.favorite,
-                      size: 120,
-                      color: Colors.white70,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-
-          // Action buttons row
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            child: Row(
-              children: [
-                IconButton(
-                  onPressed: _toggleLike,
-                  icon: Icon(
-                    post.isLiked ? Icons.favorite : Icons.favorite_border,
-                    color: post.isLiked ? Colors.red : Colors.black87,
-                    size: 30,
                   ),
                 ),
-                IconButton(
-                  onPressed: _openComments,
-                  icon: const Icon(Icons.chat_bubble_outline, size: 28),
-                ),
-                IconButton(
-                  onPressed: () {}, // share functionality
-                  icon: const Icon(Icons.send_outlined, size: 28),
-                ),
-                const Spacer(),
-                IconButton(
-                  onPressed: () {}, // bookmark/save
-                  icon: const Icon(Icons.bookmark_border, size: 28),
-                ),
-              ],
-            ),
-          ),
-
-          // Likes count
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              '${post.likeCount} likes',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
               ),
-            ),
-          ),
 
-          const SizedBox(height: 6),
-
-          // Username + caption
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: RichText(
-              text: TextSpan(
-                style: const TextStyle(color: Colors.black, fontSize: 14),
-                children: [
-                  TextSpan(
-                    text: '${post.username ?? 'User'} ',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  TextSpan(text: post.caption),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 12),
-
-          // Comments teaser
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: GestureDetector(
-              onTap: _openComments,
-              child: Text(
-                post.comments.isEmpty
-                    ? 'Add a comment...'
-                    : 'View all ${post.comments.length} comments',
-                style: TextStyle(
-                  color: Colors.grey.shade700,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 24),
-        ],
+              const SizedBox(height: 24),
+            ],
+          );
+        },
       ),
     );
   }
-} 
+}
