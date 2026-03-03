@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'profile_screen.dart';
 import 'edit_profile_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/focus_mode_service.dart';
+import 'focus_mode_screen.dart';
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -14,6 +16,81 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _index = 0;
+  Future<void> _showFocusDialog() async {
+  final service = FocusModeService();
+
+  showModalBottomSheet(
+    context: context,
+    builder: (_) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                "Start Focus Mode",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              ListTile(
+                title: const Text("15 minutes"),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await service.enableForMinutes(15);
+                  if (!mounted) return;
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const FocusModeScreen(),
+                    ),
+                  );
+                  setState(() {});
+                },
+              ),
+
+              ListTile(
+                title: const Text("30 minutes"),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await service.enableForMinutes(30);
+                  if (!mounted) return;
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const FocusModeScreen(),
+                    ),
+                  );
+                  setState(() {});
+                },
+              ),
+
+              ListTile(
+                title: const Text("60 minutes"),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await service.enableForMinutes(60);
+                  if (!mounted) return;
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const FocusModeScreen(),
+                    ),
+                  );
+                  setState(() {});
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
 
   void _onTabSelected(int index) {
     setState(() => _index = index);
@@ -101,10 +178,15 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const Spacer(),
+           _buildAppBarIcon(Icons.self_improvement, () async {
+            // open a picker / enable focus
+                  await _showFocusDialog();
+          }),
+          const SizedBox(width: 12),
           _buildAppBarIcon(Icons.favorite_border, () {}),
           const SizedBox(width: 12),
           _buildAppBarIcon(Icons.send_outlined, () {}),
-        ],
+                  ],
       ),
     );
   }
