@@ -235,11 +235,25 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
 
+      final posts = snapshot.data!.docs.where((doc) {
+        final imageUrl = (doc['imageUrl'] ?? '').toString();
+        return imageUrl.isNotEmpty && !imageUrl.contains('firebasestorage.googleapis.com');
+      }).toList();
+
+      if (posts.isEmpty) {
+        return const Center(
+          child: Text(
+            "No Cloudinary posts yet",
+            style: TextStyle(fontSize: 18),
+          ),
+        );
+      }
+
       return ListView.builder(
         physics: const BouncingScrollPhysics(),
-        itemCount: snapshot.data!.docs.length,
+        itemCount: posts.length,
         itemBuilder: (context, index) {
-          final data = snapshot.data!.docs[index];
+          final data = posts[index];
 
           return _buildRealPostCard(
             imageUrl: data['imageUrl'],
@@ -414,14 +428,48 @@ class _HomeScreenState extends State<HomeScreen> {
 
         AspectRatio(
           aspectRatio: 1,
-          child: Image.network(
-            imageUrl,
-            fit: BoxFit.cover,
-            loadingBuilder: (context, child, loading) {
-              if (loading == null) return child;
-              return const Center(child: CircularProgressIndicator());
-            },
-          ),
+          child: imageUrl.isEmpty
+              ? Container(
+                  color: Colors.grey.shade200,
+                  child: const Center(
+                    child: Icon(Icons.image_not_supported, size: 40, color: Colors.grey),
+                  ),
+                )
+              : Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loading) {
+                    if (loading == null) return child;
+                    return const Center(child: CircularProgressIndicator());
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    print('❌ Error loading image: $error');
+                    final errorMessage = error.toString();
+                    final isFirebaseError = errorMessage.contains('firebasestorage.googleapis.com') || 
+                                           errorMessage.contains('412') ||
+                                           errorMessage.contains('Precondition Failed');
+                    
+                    return Container(
+                      color: Colors.grey.shade200,
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.broken_image, size: 40, color: Colors.grey),
+                            const SizedBox(height: 8),
+                            Text(
+                              isFirebaseError 
+                                ? 'Image storage expired - please re-upload'
+                                : 'Failed to load image', 
+                              style: const TextStyle(color: Colors.grey),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
         ),
 
         Padding(

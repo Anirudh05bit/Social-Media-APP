@@ -146,7 +146,14 @@ class ProfileScreen extends StatelessWidget {
                       return const Center(child: Text("No posts yet"));
                     }
 
-                    final posts = postSnap.data!.docs;
+                    final posts = postSnap.data!.docs.where((doc) {
+                      final imageUrl = (doc.data()?['imageUrl'] ?? '').toString();
+                      return imageUrl.isNotEmpty && !imageUrl.contains('firebasestorage.googleapis.com');
+                    }).toList();
+
+                    if (posts.isEmpty) {
+                      return const Center(child: Text("No Cloudinary posts yet"));
+                    }
 
                     return GridView.builder(
                       padding: const EdgeInsets.all(2),
@@ -164,7 +171,38 @@ class ProfileScreen extends StatelessWidget {
                           color: Colors.grey.shade200,
                           child: imageUrl.isEmpty
                               ? const Center(child: Icon(Icons.broken_image))
-                              : Image.network(imageUrl, fit: BoxFit.cover),
+                              : Image.network(
+                                  imageUrl,
+                                  fit: BoxFit.cover,
+                                  loadingBuilder: (context, child, loading) {
+                                    if (loading == null) return child;
+                                    return const Center(child: CircularProgressIndicator());
+                                  },
+                                  errorBuilder: (context, error, stackTrace) {
+                                    print('❌ Error loading image: $error');
+                                    final errorMessage = error.toString();
+                                    final isFirebaseError = errorMessage.contains('firebasestorage.googleapis.com') || 
+                                                           errorMessage.contains('412') ||
+                                                           errorMessage.contains('Precondition Failed');
+                                    
+                                    return Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.broken_image, size: 40, color: Colors.grey),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            isFirebaseError 
+                                              ? 'Image storage expired - please re-upload'
+                                              : 'Failed to load image', 
+                                            style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
                         );
                       },
                     );

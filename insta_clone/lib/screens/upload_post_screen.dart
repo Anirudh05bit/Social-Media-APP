@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../services/upload_service.dart';
+import '../services/cloudinary_upload_service.dart';
 
 class UploadPostScreen extends StatefulWidget {
   const UploadPostScreen({super.key});
@@ -71,13 +71,28 @@ class _UploadPostScreenState extends State<UploadPostScreen> {
             onPressed: _image == null
            ? null
            : () async {
-             await UploadService().uploadPost(
-                image: _image!,
-              caption: _captionController.text,
-          );
+               try {
+                 ScaffoldMessenger.of(context).showSnackBar(
+                   const SnackBar(content: Text('Uploading post to Cloudinary...')),
+                 );
 
-        Navigator.pop(context);
-      },
+                 await CloudinaryUploadService().uploadPost(
+                   image: _image!,
+                   caption: _captionController.text,
+                 );
+
+                 ScaffoldMessenger.of(context).showSnackBar(
+                   const SnackBar(content: Text('Post uploaded successfully!')),
+                 );
+
+                 Navigator.pop(context);
+               } catch (e) {
+                 print('Upload error: $e');
+                 ScaffoldMessenger.of(context).showSnackBar(
+                   SnackBar(content: Text('Failed to upload: ${e.toString()}')),
+                 );
+               }
+             },
 
             child: Text(
               "Post",
@@ -94,6 +109,17 @@ class _UploadPostScreenState extends State<UploadPostScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+
+            // DEBUG BUTTON - Test Cloudinary connection
+            ElevatedButton(
+              onPressed: () async {
+                await CloudinaryUploadService().testCloudinaryConnection();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Check console for Cloudinary test results')),
+                );
+              },
+              child: const Text('Test Cloudinary Connection'),
+            ),
 
             // IMAGE PICKER AREA
             GestureDetector(

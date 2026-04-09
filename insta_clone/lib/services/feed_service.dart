@@ -6,7 +6,7 @@ class FeedService {
   Stream<QuerySnapshot> getFeed() {
     return _firestore
         .collection("posts")
-        .orderBy("date", descending: true)
+        .orderBy("createdAt", descending: true)
         .snapshots();
   }
 }

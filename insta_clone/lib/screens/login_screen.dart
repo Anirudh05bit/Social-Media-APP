@@ -52,15 +52,14 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               
             ),
             child: Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                   colors: [
-                    // ignore: deprecated_member_use
-                    Colors.black.withOpacity(0.35),
-                    Colors.black.withOpacity(0.65),
-                    Colors.black.withOpacity(0.85),
+                    Color(0xFF833AB4), // Instagram Purple
+                    Color(0xFFFD1D1D), // Instagram Red
+                    Color(0xFFFCB045), // Instagram Orange
                   ],
                 ),
               ),
@@ -180,27 +179,50 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                             width: double.infinity,
                             height: 56,
                             child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => const HomeScreen()),
-                                );
+                              onPressed: _loading ? null : () async {
+                                final email = _emailController.text.trim();
+                                final password = _passwordController.text.trim();
+                                if (email.isEmpty || password.isEmpty) return;
+
+                                setState(() => _loading = true);
+                                final user = await _authService.login(email, password);
+                                if (mounted) setState(() => _loading = false);
+
+                                if (user != null) {
+                                  if (context.mounted) {
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                                    );
+                                  }
+                                } else {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Login failed. Please check credentials.')),
+                                    );
+                                  }
+                                }
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue.shade600,
-                                foregroundColor: Colors.white,
+                                backgroundColor: Colors.white,
+                                foregroundColor: const Color(0xFFFD1D1D),
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                               ),
-                              child: const Text(
-                                'Login',
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                              child: _loading 
+                                  ? const SizedBox(
+                                      height: 24, width: 24,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Text(
+                                      'Login',
+                                      style: TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                             ),
                           ),
 
@@ -227,8 +249,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                         ),
                         GestureDetector(
                           onTap: () {
-                             Navigator.push(context, MaterialPageRoute(builder: (_) => SignupScreen()));
-
+                             Navigator.push(context, MaterialPageRoute(builder: (_) => const SignupScreen()));
                           },
                           child: const Text(
                             'Create account',

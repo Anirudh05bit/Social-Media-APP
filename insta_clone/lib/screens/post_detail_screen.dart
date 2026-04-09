@@ -94,10 +94,37 @@ class _PostDetailScreenState extends State<PostDetailScreen>
       return Image.network(
         post.imageUrl!,
         fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => Container(
-          color: Colors.grey.shade200,
-          child: const Center(child: Icon(Icons.broken_image, size: 60)),
-        ),
+        loadingBuilder: (context, child, loading) {
+          if (loading == null) return child;
+          return const Center(child: CircularProgressIndicator());
+        },
+        errorBuilder: (context, error, stackTrace) {
+          print('❌ Error loading image: $error');
+          final errorMessage = error.toString();
+          final isFirebaseError = errorMessage.contains('firebasestorage.googleapis.com') || 
+                                 errorMessage.contains('412') ||
+                                 errorMessage.contains('Precondition Failed');
+          
+          return Container(
+            color: Colors.grey.shade200,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.broken_image, size: 60, color: Colors.grey),
+                  const SizedBox(height: 8),
+                  Text(
+                    isFirebaseError 
+                      ? 'Image storage expired - please re-upload'
+                      : 'Failed to load image', 
+                    style: const TextStyle(color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       );
     }
 
