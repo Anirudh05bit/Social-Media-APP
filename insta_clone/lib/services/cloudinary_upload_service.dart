@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,6 +10,8 @@ class CloudinaryUploadService {
   // Get these from: https://cloudinary.com/console
   static const String CLOUD_NAME = 'dp6wueedh';
   static const String UPLOAD_PRESET = 'insta_clone_preset';
+  static const String API_KEY = 'your_api_key'; // Add your API key
+  static const String API_SECRET = 'your_api_secret'; // Add your API secret
 
   // Do NOT put your API secret in the app. Use unsigned upload presets instead.
 
@@ -46,7 +49,13 @@ class CloudinaryUploadService {
 
       // ── 1. Upload to Cloudinary ─────────────────────────────────
       print("Uploading to Cloudinary...");
-      final imageUrl = await _uploadToCloudinary(image, postId);
+      final imageUrl = await _uploadToCloudinary(
+        image: image,
+        publicId: postId,
+        caption: caption,
+        username: username,
+        uid: uid,
+      );
       print("✅ Image uploaded: $imageUrl");
 
       // ── 2. Save post metadata to Firestore ──────────────────────
@@ -74,7 +83,13 @@ class CloudinaryUploadService {
   }
 
   /// Upload image file to Cloudinary using unsigned upload
-  Future<String> _uploadToCloudinary(File image, String publicId) async {
+  Future<String> _uploadToCloudinary({
+    required File image,
+    required String publicId,
+    required String caption,
+    required String username,
+    required String uid,
+  }) async {
     try {
       final url = "https://api.cloudinary.com/v1_1/$CLOUD_NAME/image/upload";
 
@@ -84,6 +99,8 @@ class CloudinaryUploadService {
         'public_id': publicId,
         'folder': 'insta_clone',
         'resource_type': 'auto',
+        // Keep context small + safe (Cloudinary "context" is metadata, not app state).
+        'context': 'caption=$caption|username=$username|uid=$uid',
       });
 
       print("Posting to: $url");
@@ -117,7 +134,14 @@ class CloudinaryUploadService {
     }
 
     print("Uploading profile avatar to Cloudinary...");
-    final imageUrl = await _uploadToCloudinary(image, publicId);
+    final user = _auth.currentUser;
+    final imageUrl = await _uploadToCloudinary(
+      image: image,
+      publicId: publicId,
+      caption: 'profile_avatar',
+      username: user?.email?.split('@').first ?? 'anonymous',
+      uid: user?.uid ?? 'unknown',
+    );
     print("✅ Profile avatar uploaded: $imageUrl");
     return imageUrl;
   }
@@ -143,5 +167,42 @@ class CloudinaryUploadService {
     } catch (e) {
       print("❌ Cloudinary connection test failed: $e");
     }
+  }
+
+  /// Update post metadata using Cloudinary API
+  Future<void> updatePostMetadata(String publicId, String caption, String username, String uid, int likeCount, List<Map<String, dynamic>> comments) async {
+    final url = 'https://api.cloudinary.com/v1_1/$CLOUD_NAME/image/update';
+
+    final context = 'caption=$caption|username=$username|uid=$uid|likeCount=$likeCount|comments=${jsonEncode(comments)}';
+
+    final response = await _dio.put(
+      url,
+      data: {
+        'public_id': publicId,
+        'context': context,
+      },
+      options: Options(
+        headers: {
+          'Authorization': 'Basic ${base64Encode(utf8.encode('$API_KEY:$API_SECRET'))}',
+        },
+      ),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update metadata: ${response.data}');
+    }
+  }
+
+  /// Get post metadata from Cloudinary
+  Future<Map<String, dynamic>> getPostMetadata(String publicId) async {
+    final url = 'https://res.cloudinary.com/$CLOUD_NAME/image/upload/$publicId.json';
+
+    final response = await _dio.get(url);
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to get metadata: ${response.data}');
+    }
+
+    return response.data;
   }
 }

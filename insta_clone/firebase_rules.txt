@@ -12,19 +12,19 @@ service cloud.firestore {
       allow read: if true;
       allow create: if request.auth != null;
       allow update, delete: if request.auth != null && request.auth.uid == resource.data.uid;
-    }
 
-    // Comments can be read by everyone but only created by authenticated users
-    match /comments/{commentId} {
-      allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.uid;
-    }
+      // Comments subcollection - anyone can read, authenticated users can create
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if request.auth != null;
+        allow update, delete: if request.auth != null && request.auth.uid == resource.data.uid;
+      }
 
-    // Likes can be managed by authenticated users
-    match /likes/{likeId} {
-      allow read: if true;
-      allow write: if request.auth != null;
+      // Likes subcollection - anyone can read, authenticated users can write
+      match /likes/{likeId} {
+        allow read: if true;
+        allow write: if request.auth != null;
+      }
     }
 
     // Test collection for debugging

@@ -5,11 +5,17 @@ import 'package:flutter/material.dart';
 import '../services/follow_service.dart';
 import '../services/user_service.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   final String uid;
   const ProfileScreen({super.key, required this.uid});
 
-  bool get _isMe => FirebaseAuth.instance.currentUser?.uid == uid;
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool get _isMe => FirebaseAuth.instance.currentUser?.uid == widget.uid;
+  bool _followBusy = false;
 
   @override
   Widget build(BuildContext context) {
@@ -22,13 +28,22 @@ class ProfileScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        stream: userService.userStream(uid),
+        stream: userService.userStream(widget.uid),
         builder: (context, userSnap) {
           if (userSnap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
           if (!userSnap.hasData || userSnap.data?.data() == null) {
-            return const Center(child: Text("User not found"));
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.person_off_outlined, size: 54, color: Colors.grey.shade500),
+                  const SizedBox(height: 10),
+                  const Text("User not found"),
+                ],
+              ),
+            );
           }
 
           final user = userSnap.data!.data()!;
@@ -104,22 +119,35 @@ class ProfileScreen extends StatelessWidget {
                                 // Later: open edit profile screen
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text("Edit Profile screen coming next 😄"),
+                                    content: Text("Edit Profile screen coming soon."),
                                   ),
                                 );
                               },
                               child: const Text("Edit Profile"),
                             )
                           : StreamBuilder<bool>(
-                              stream: followService.isFollowingStream(uid),
+                              stream: followService.isFollowingStream(widget.uid),
                               builder: (context, followSnap) {
                                 final isFollowing = followSnap.data ?? false;
 
                                 return ElevatedButton(
-                                  onPressed: () async {
-                                    await followService.toggleFollow(uid);
-                                  },
-                                  child: Text(isFollowing ? "Unfollow" : "Follow"),
+                                  onPressed: _followBusy
+                                      ? null
+                                      : () async {
+                                          setState(() => _followBusy = true);
+                                          try {
+                                            await followService.toggleFollow(widget.uid);
+                                          } finally {
+                                            if (mounted) setState(() => _followBusy = false);
+                                          }
+                                        },
+                                  child: _followBusy
+                                      ? const SizedBox(
+                                          height: 18,
+                                          width: 18,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        )
+                                      : Text(isFollowing ? "Unfollow" : "Follow"),
                                 );
                               },
                             ),
@@ -135,7 +163,7 @@ class ProfileScreen extends StatelessWidget {
                 child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                   stream: FirebaseFirestore.instance
                       .collection('posts')
-                      .where('uid', isEqualTo: uid) // IMPORTANT
+                      .where('uid', isEqualTo: widget.uid) // IMPORTANT
                       .orderBy('createdAt', descending: true)
                       .snapshots(),
                   builder: (context, postSnap) {
@@ -143,7 +171,16 @@ class ProfileScreen extends StatelessWidget {
                       return const Center(child: CircularProgressIndicator());
                     }
                     if (!postSnap.hasData || postSnap.data!.docs.isEmpty) {
-                      return const Center(child: Text("No posts yet"));
+                      return Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.grid_on_outlined, size: 54, color: Colors.grey.shade500),
+                            const SizedBox(height: 10),
+                            const Text("No posts yet"),
+                          ],
+                        ),
+                      );
                     }
 
                     final posts = postSnap.data!.docs.where((doc) {
@@ -152,7 +189,16 @@ class ProfileScreen extends StatelessWidget {
                     }).toList();
 
                     if (posts.isEmpty) {
-                      return const Center(child: Text("No Cloudinary posts yet"));
+                      return Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.cloud_off_outlined, size: 54, color: Colors.grey.shade500),
+                            const SizedBox(height: 10),
+                            const Text("No Cloudinary posts yet"),
+                          ],
+                        ),
+                      );
                     }
 
                     return GridView.builder(

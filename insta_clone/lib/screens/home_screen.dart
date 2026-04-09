@@ -1,12 +1,16 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'upload_post_screen.dart';
 import '../services/feed_service.dart';
+import '../services/like_service.dart';
+import '../services/comment_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'profile_screen.dart';
 import 'edit_profile_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/focus_mode_service.dart';
 import 'focus_mode_screen.dart';
+import 'comments_screen.dart';
+import '../models/post_model.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,6 +21,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _index = 0;
+
   Future<void> _showFocusDialog() async {
     final service = FocusModeService();
 
@@ -34,51 +39,33 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
-
                 ListTile(
                   title: const Text("15 minutes"),
                   onTap: () async {
                     Navigator.pop(context);
                     await service.enableForMinutes(15);
                     if (!mounted) return;
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const FocusModeScreen(),
-                      ),
-                    );
+                    await Navigator.push(context, MaterialPageRoute(builder: (_) => const FocusModeScreen()));
                     setState(() {});
                   },
                 ),
-
                 ListTile(
                   title: const Text("30 minutes"),
                   onTap: () async {
                     Navigator.pop(context);
                     await service.enableForMinutes(30);
                     if (!mounted) return;
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const FocusModeScreen(),
-                      ),
-                    );
+                    await Navigator.push(context, MaterialPageRoute(builder: (_) => const FocusModeScreen()));
                     setState(() {});
                   },
                 ),
-
                 ListTile(
                   title: const Text("60 minutes"),
                   onTap: () async {
                     Navigator.pop(context);
                     await service.enableForMinutes(60);
                     if (!mounted) return;
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const FocusModeScreen(),
-                      ),
-                    );
+                    await Navigator.push(context, MaterialPageRoute(builder: (_) => const FocusModeScreen()));
                     setState(() {});
                   },
                 ),
@@ -99,18 +86,17 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       extendBody: true,
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors:
-                [
-                      const Color(0xFFFF9500), // vibrant orange
-                      const Color(0xFFFFAB76), // warm peach
-                      const Color(0xFFFFDAC1), // soft coral
-                    ]
-                    .map((c) => c.withOpacity(0.08))
-                    .toList(), // softer background opacity
+            colors: [
+              Color.fromARGB(255, 0, 0, 0),
+              Color.fromARGB(255, 0, 0, 0),
+              Color(0xFFB2002D),
+              Color(0xFFFF6A00),
+            ],
+            stops: [0.0, 0.35, 0.68, 1.0],
           ),
         ),
         child: SafeArea(
@@ -152,35 +138,30 @@ class _HomeScreenState extends State<HomeScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withOpacity(0.08),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.18)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.18),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Row(
         children: [
-          ShaderMask(
-            shaderCallback: (bounds) => const LinearGradient(
-              colors: [Color(0xFFFF9500), Color(0xFFFFAB76), Color(0xFFFF6B6B)],
-            ).createShader(bounds),
-            child: const Text(
-              'Pixta',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: 0.5,
-              ),
+          const Text(
+            'Pixta',
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              letterSpacing: 0.5,
             ),
           ),
           const Spacer(),
           _buildAppBarIcon(Icons.self_improvement, () async {
-            // open a picker / enable focus
             await _showFocusDialog();
           }),
           const SizedBox(width: 12),
@@ -199,10 +180,11 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.grey.shade50,
+          color: Colors.white.withOpacity(0.08),
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withOpacity(0.14)),
         ),
-        child: Icon(icon, size: 24, color: Colors.grey.shade800),
+        child: Icon(icon, size: 24, color: Colors.white),
       ),
     );
   }
@@ -214,25 +196,24 @@ class _HomeScreenState extends State<HomeScreen> {
       child: _index == 0
           ? _buildFeedScreen()
           : _index == 1
-          ? _buildUploadScreen()
-          : _buildProfileScreen(),
+              ? _buildUploadScreen()
+              : _buildProfileScreen(),
     );
   }
 
+  // ── FEED ─────────────────────────────────────────────────────
   Widget _buildFeedScreen() {
     return StreamBuilder(
       stream: FeedService().getFeed(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator(color: Colors.white));
         }
-
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return const Center(
-            child: Text("No posts yet", style: TextStyle(fontSize: 18)),
+            child: Text("No posts yet", style: TextStyle(fontSize: 18, color: Colors.white)),
           );
         }
-
         final posts = snapshot.data!.docs.where((doc) {
           final imageUrl = (doc['imageUrl'] ?? '').toString();
           return imageUrl.isNotEmpty &&
@@ -241,10 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         if (posts.isEmpty) {
           return const Center(
-            child: Text(
-              "No Cloudinary posts yet",
-              style: TextStyle(fontSize: 18),
-            ),
+            child: Text("No Cloudinary posts yet", style: TextStyle(fontSize: 18, color: Colors.white)),
           );
         }
 
@@ -252,255 +230,17 @@ class _HomeScreenState extends State<HomeScreen> {
           physics: const BouncingScrollPhysics(),
           itemCount: posts.length,
           itemBuilder: (context, index) {
-            final data = posts[index];
-
-            return _buildRealPostCard(
-               imageUrl: data['imageUrl'] ?? '',
-               caption: data['caption'] ?? '',
-               username: data['username'] ?? 'user',
-               postId: data['postId'] ?? '',
-               likeCount: (data['likeCount'] ?? 0) as int,
+            final d = posts[index].data() as Map<String, dynamic>;
+            // ✅ Use _PostCard with real postId for live likes & comments
+            return _PostCard(
+              postId: (d['postId'] ?? posts[index].id).toString(),
+              imageUrl: (d['imageUrl'] ?? '').toString(),
+              caption: (d['caption'] ?? '').toString(),
+              username: (d['username'] ?? 'user').toString(),
             );
           },
         );
       },
-    );
-  }
-
-  Widget _buildStylishPostCard(int index) {
-    final colors = [
-      [const Color(0xFFFF9500), const Color(0xFFFFAB76)], // orange-peach
-      [const Color(0xFFFF6B6B), const Color(0xFFFFDAC1)], // coral-soft
-      [const Color(0xFF34D399), const Color(0xFF6EE7B7)], // mint-green happy
-      [const Color(0xFF60A5FA), const Color(0xFF93C5FD)], // fresh blue
-      [const Color(0xFFFBBF24), const Color(0xFFFCD34D)], // sunny yellow
-    ];
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: colors[index % colors.length][0].withOpacity(0.18),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: colors[index % colors.length],
-                    ),
-                  ),
-                  child: const Icon(Icons.person, color: Colors.white),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'User ${index + 1}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    Text(
-                      '${index + 1} hours ago',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                Icon(Icons.more_vert, color: Colors.grey.shade700),
-              ],
-            ),
-          ),
-          Container(
-            height: 320,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: colors[index % colors.length],
-              ),
-            ),
-            child: Center(
-              child: Icon(
-                Icons.photo_library,
-                size: 80,
-                color: Colors.white.withOpacity(0.6),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    _buildActionButton(
-                      Icons.favorite_border,
-                      '${(index + 1) * 42}',
-                    ),
-                    const SizedBox(width: 16),
-                    _buildActionButton(
-                      Icons.chat_bubble_outline,
-                      '${(index + 1) * 8}',
-                    ),
-                    const SizedBox(width: 16),
-                    _buildActionButton(
-                      Icons.send_outlined,
-                      '${(index + 1) * 3}',
-                    ),
-                    const Spacer(),
-                    Icon(Icons.bookmark_border, color: Colors.grey.shade800),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Amazing post content here! 🎨✨',
-                  style: TextStyle(
-                    color: Colors.grey.shade800,
-                    fontSize: 14,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButton(IconData icon, String count) {
-    return Row(
-      children: [
-        Icon(icon, color: Colors.grey.shade800, size: 26),
-        const SizedBox(width: 6),
-        Text(
-          count,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade700,
-            fontSize: 14,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRealPostCard({
-    required String imageUrl,
-    required String caption,
-    required String username,
-    required String postId,
-    required int likeCount,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.person)),
-            title: const Text("User"),
-            subtitle: const Text("Just now"),
-            trailing: const Icon(Icons.more_vert),
-          ),
-
-          AspectRatio(
-            aspectRatio: 1,
-            child: imageUrl.isEmpty
-                ? Container(
-                    color: Colors.grey.shade200,
-                    child: const Center(
-                      child: Icon(
-                        Icons.image_not_supported,
-                        size: 40,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  )
-                : Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, loading) {
-                      if (loading == null) return child;
-                      return const Center(child: CircularProgressIndicator());
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      print('❌ Error loading image: $error');
-                      final errorMessage = error.toString();
-                      final isFirebaseError =
-                          errorMessage.contains(
-                            'firebasestorage.googleapis.com',
-                          ) ||
-                          errorMessage.contains('412') ||
-                          errorMessage.contains('Precondition Failed');
-
-                      return Container(
-                        color: Colors.grey.shade200,
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.broken_image,
-                                size: 40,
-                                color: Colors.grey,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                isFirebaseError
-                                    ? 'Image storage expired - please re-upload'
-                                    : 'Failed to load image',
-                                style: const TextStyle(color: Colors.grey),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(caption, style: const TextStyle(fontSize: 15)),
-          ),
-        ],
-      ),
     );
   }
 
@@ -522,11 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFFFF9500),
-                    Color(0xFFFFAB76),
-                    Color(0xFFFF6B6B),
-                  ],
+                  colors: [Color(0xFFFF9500), Color(0xFFFFAB76), Color(0xFFFF6B6B)],
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -536,52 +272,42 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.add_photo_alternate,
-                size: 80,
-                color: Colors.white,
-              ),
+              child: const Icon(Icons.add_photo_alternate, size: 80, color: Colors.white),
             ),
           ),
           const SizedBox(height: 32),
           const Text(
             'Create New Post',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -0.5,
-            ),
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: -0.5),
           ),
           const SizedBox(height: 12),
           Text(
             'Share your moments with the world',
-            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 16, color: Colors.white.withOpacity(0.6)),
           ),
         ],
       ),
     );
   }
 
+  // ── PROFILE ───────────────────────────────────────────────────
   Widget _buildProfileScreen() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-
     if (uid == null) {
-      return const Center(child: Text("User not logged in"));
+      return const Center(child: Text("User not logged in", style: TextStyle(color: Colors.white)));
     }
 
     return FutureBuilder(
       future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator(color: Colors.white));
         }
-
         if (!snapshot.hasData || !snapshot.data!.exists) {
-          return const Center(child: Text("No profile data found"));
+          return const Center(child: Text("No profile data found", style: TextStyle(color: Colors.white)));
         }
 
         final data = snapshot.data!.data() as Map<String, dynamic>;
-
         final username = data['username'] ?? 'Your Name';
         final bio = data['bio'] ?? '';
         final photoUrl = data['photoUrl'];
@@ -592,74 +318,85 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               const SizedBox(height: 20),
 
-              // PROFILE IMAGE
-              CircleAvatar(
-                radius: 60,
-                backgroundColor: Colors.grey.shade200,
-                backgroundImage: photoUrl != null && photoUrl != ""
-                    ? NetworkImage(photoUrl)
-                    : null,
-                child: photoUrl == null || photoUrl == ""
-                    ? const Icon(Icons.person, size: 60)
-                    : null,
+              // Profile image with gradient ring
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF833AB4), Color(0xFFFD1D1D), Color(0xFFFCB045)],
+                  ),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF1A1A2E)),
+                  child: CircleAvatar(
+                    radius: 56,
+                    backgroundColor: Colors.white12,
+                    backgroundImage: photoUrl != null && photoUrl != "" ? NetworkImage(photoUrl) : null,
+                    child: photoUrl == null || photoUrl == ""
+                        ? const Icon(Icons.person, size: 56, color: Colors.white54)
+                        : null,
+                  ),
+                ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // USERNAME
               Text(
                 username,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
               ),
 
               const SizedBox(height: 8),
 
-              // BIO
               if (bio.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 40),
                   child: Text(
                     bio,
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                    style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.65)),
                   ),
                 ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-              // EDIT PROFILE BUTTON
+              // Stats row
+              _buildStatsRow(uid),
+
+              const SizedBox(height: 20),
+
+              // Edit Profile button
               InkWell(
                 borderRadius: BorderRadius.circular(25),
                 onTap: () async {
                   await Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const EditProfileScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const EditProfileScreen()),
                   );
-
-                  setState(() {}); // refresh after returning
+                  setState(() {});
                 },
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 40),
                   height: 50,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFFFF9500), Color(0xFFFFAB76)],
+                      colors: [Color(0xFF833AB4), Color(0xFFFD1D1D), Color(0xFFFCB045)],
                     ),
                     borderRadius: BorderRadius.circular(25),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF833AB4).withOpacity(0.4),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
                   child: const Center(
                     child: Text(
                       'Edit Profile',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
@@ -675,6 +412,46 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildStatsRow(String uid) {
+    return FutureBuilder(
+      future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
+      builder: (_, uSnap) {
+        final d = uSnap.data?.data() as Map<String, dynamic>? ?? {};
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance.collection('posts').where('uid', isEqualTo: uid).snapshots(),
+          builder: (_, snap) {
+            final postCount = snap.data?.docs.length ?? 0;
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _statBox('Posts', postCount.toString()),
+                _statBox('Followers', (d['followersCount'] ?? 0).toString()),
+                _statBox('Following', (d['followingCount'] ?? 0).toString()),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _statBox(String label, String value) => Expanded(
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 6),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.12)),
+          ),
+          child: Column(children: [
+            Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+            const SizedBox(height: 4),
+            Text(label, style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.6))),
+          ]),
+        ),
+      );
+
   Widget _buildProfileGrid(String uid) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
@@ -685,27 +462,26 @@ class _HomeScreenState extends State<HomeScreen> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(child: CircularProgressIndicator()),
+            child: Center(child: CircularProgressIndicator(color: Colors.white)),
           );
         }
-
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(child: Text('No posts yet')),
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Text('No posts yet', style: TextStyle(color: Colors.white.withOpacity(0.5))),
           );
         }
-
         final posts = snapshot.data!.docs.where((doc) {
           final imageUrl = (doc.data()['imageUrl'] ?? '').toString();
-          return imageUrl.isNotEmpty &&
-              !imageUrl.contains('firebasestorage.googleapis.com');
+          return imageUrl.isNotEmpty && !imageUrl.contains('firebasestorage.googleapis.com');
         }).toList();
 
         if (posts.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(child: Text('No Cloudinary posts yet')),
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Text('No posts yet.\nTap + to upload!',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white.withOpacity(0.5))),
           );
         }
 
@@ -722,21 +498,17 @@ class _HomeScreenState extends State<HomeScreen> {
           itemBuilder: (context, index) {
             final postData = posts[index].data();
             final imageUrl = (postData['imageUrl'] ?? '').toString();
-
-            return Container(
-              color: Colors.grey.shade200,
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(4),
               child: imageUrl.isEmpty
-                  ? const Center(child: Icon(Icons.broken_image))
+                  ? Container(color: Colors.white12, child: const Icon(Icons.broken_image, color: Colors.white38))
                   : Image.network(
                       imageUrl,
                       fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loading) {
-                        if (loading == null) return child;
-                        return const Center(child: CircularProgressIndicator());
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Center(child: Icon(Icons.broken_image));
-                      },
+                      loadingBuilder: (_, child, loading) =>
+                          loading == null ? child : const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                      errorBuilder: (_, __, ___) =>
+                          Container(color: Colors.white12, child: const Icon(Icons.broken_image, color: Colors.white38)),
                     ),
             );
           },
@@ -745,85 +517,58 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildStatCard(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildStylishBottomNav() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-      height: 64,
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(35),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Container(
+            height: 64,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(35),
+              border: Border.all(color: Colors.white.withOpacity(0.16)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.25),
+                  blurRadius: 28,
+                  offset: const Offset(0, 14),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildNavItem(0, Icons.home_rounded, Icons.home_outlined),
+                _buildNavItem(1, Icons.add_box_rounded, Icons.add_box_outlined),
+                _buildNavItem(2, Icons.person_rounded, Icons.person_outline_rounded),
+              ],
+            ),
           ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildNavItem(0, Icons.home_rounded, Icons.home_outlined),
-          _buildNavItem(1, Icons.add_box_rounded, Icons.add_box_outlined),
-          _buildNavItem(2, Icons.person_rounded, Icons.person_outline_rounded),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildNavItem(int index, IconData activeIcon, IconData inactiveIcon) {
     final isSelected = _index == index;
-
     return GestureDetector(
       onTap: () => _onTabSelected(index),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOutCubic,
-        padding: EdgeInsets.symmetric(
-          horizontal: isSelected ? 24 : 16,
-          vertical: 12,
-        ),
+        padding: EdgeInsets.symmetric(horizontal: isSelected ? 24 : 16, vertical: 12),
         decoration: BoxDecoration(
           gradient: isSelected
-              ? const LinearGradient(
-                  colors: [Color(0xFFFF9500), Color(0xFFFFAB76)],
-                )
+              ? const LinearGradient(colors: [Color(0xFF833AB4), Color(0xFFFD1D1D)])
               : null,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Icon(
           isSelected ? activeIcon : inactiveIcon,
-          color: isSelected ? Colors.white : Colors.grey.shade600,
+          color: isSelected ? Colors.white : Colors.white38,
           size: 28,
         ),
       ),
@@ -832,23 +577,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildStylishFAB() {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const UploadPostScreen()),
-        );
-      },
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UploadPostScreen())),
       child: Container(
         width: 70,
         height: 70,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: const LinearGradient(
-            colors: [Color(0xFFFF9500), Color(0xFFFFAB76), Color(0xFFFF6B6B)],
+            colors: [Color(0xFF833AB4), Color(0xFFFD1D1D), Color(0xFFFCB045)],
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFFF9500).withOpacity(0.45),
+              color: const Color(0xFF833AB4).withOpacity(0.5),
               blurRadius: 25,
               offset: const Offset(0, 12),
             ),
@@ -856,6 +596,183 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: const Icon(Icons.camera_alt, color: Colors.white, size: 32),
       ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ✅ _PostCard — fully interactive with LIVE likes & comments
+// ══════════════════════════════════════════════════════════════════
+class _PostCard extends StatefulWidget {
+  final String postId;
+  final String imageUrl;
+  final String caption;
+  final String username;
+
+  const _PostCard({
+    required this.postId,
+    required this.imageUrl,
+    required this.caption,
+    required this.username,
+  });
+
+  @override
+  State<_PostCard> createState() => _PostCardState();
+}
+
+class _PostCardState extends State<_PostCard> {
+  final _likeService = LikeService();
+  final _commentService = CommentService();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: BoxDecoration(
+        color: const Color(0xFF101325),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 24, offset: const Offset(0, 12)),
+        ],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+        // ── Header ────────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+          child: Row(children: [
+            Container(
+              width: 42, height: 42,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(colors: [Color(0xFF833AB4), Color(0xFFFD1D1D)]),
+              ),
+              child: const Icon(Icons.person, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(widget.username, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
+              Text('Just now', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12)),
+            ]),
+            const Spacer(),
+            Icon(Icons.more_horiz, color: Colors.white.withOpacity(0.5)),
+          ]),
+        ),
+
+        // ── Image ─────────────────────────────────────────────────
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: AspectRatio(
+            aspectRatio: 1,
+            child: widget.imageUrl.isEmpty
+                ? Container(color: Colors.white12, child: const Icon(Icons.image, color: Colors.white38, size: 50))
+                : Image.network(
+                    widget.imageUrl,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (_, child, loading) =>
+                        loading == null ? child : const Center(child: CircularProgressIndicator(color: Colors.white)),
+                    errorBuilder: (_, __, ___) =>
+                        Container(color: Colors.white12, child: const Icon(Icons.broken_image, color: Colors.white38)),
+                  ),
+          ),
+        ),
+
+        // ── Like + Comment buttons (LIVE) ─────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: StreamBuilder<bool>(
+            stream: _likeService.isLikedStream(widget.postId),
+            builder: (context, likedSnap) {
+              final isLiked = likedSnap.data ?? false;
+              return Row(children: [
+
+                // ✅ Like button — tappable, turns red when liked
+                GestureDetector(
+                  onTap: () => _likeService.toggleLike(widget.postId),
+                  child: Row(children: [
+                    Icon(
+                      isLiked ? Icons.favorite : Icons.favorite_border,
+                      color: isLiked ? Colors.redAccent : Colors.white70,
+                      size: 28,
+                    ),
+                    const SizedBox(width: 6),
+                    // ✅ Live like count from Firestore
+                    StreamBuilder<int>(
+                      stream: _likeService.likeCountStream(widget.postId),
+                      builder: (_, countSnap) => Text(
+                        '${countSnap.data ?? 0}',
+                        style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600, fontSize: 15),
+                      ),
+                    ),
+                  ]),
+                ),
+
+                const SizedBox(width: 20),
+
+                // ✅ Comment button — shows comments in bottom sheet
+                GestureDetector(
+                  onTap: () {
+                    final post = PostModel(
+                      postId: widget.postId,
+                      username: widget.username,
+                      imagePath: '', // Not used
+                      imageUrl: widget.imageUrl,
+                      caption: widget.caption,
+                      createdAt: DateTime.now(), // Placeholder
+                    );
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => CommentsBottomSheet(
+                        post: post,
+                        onUpdated: () => setState(() {}),
+                      ),
+                    );
+                  },
+                  child: Row(children: [
+                    const Icon(
+                      Icons.chat_bubble_outline,
+                      color: Colors.white70,
+                      size: 26,
+                    ),
+                    const SizedBox(width: 6),
+                    // ✅ Live comment count from Firestore
+                    StreamBuilder<QuerySnapshot>(
+                      stream: _commentService.commentsStream(widget.postId),
+                      builder: (_, snap) => Text(
+                        '${snap.data?.docs.length ?? 0}',
+                        style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w600, fontSize: 15),
+                      ),
+                    ),
+                  ]),
+                ),
+
+                const Spacer(),
+                const Icon(Icons.bookmark_border, color: Colors.white70, size: 26),
+              ]);
+            },
+          ),
+        ),
+
+        // ── Caption ───────────────────────────────────────────────
+        if (widget.caption.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(fontSize: 14, color: Colors.white),
+                children: [
+                  TextSpan(text: '${widget.username} ', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  TextSpan(text: widget.caption, style: TextStyle(color: Colors.white.withOpacity(0.8))),
+                ],
+              ),
+            ),
+          )
+        else
+          const SizedBox(height: 10),
+      ]),
     );
   }
 }

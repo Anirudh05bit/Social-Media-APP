@@ -4,6 +4,7 @@ import 'home_screen.dart'; // your existing home
 // import 'signup_screen.dart'; // uncomment when ready
 import '../services/auth_service.dart';
 import 'signup_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,11 +14,15 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin {
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _emailFocus = FocusNode();
+  final _passwordFocus = FocusNode();
   bool _isPasswordVisible = false;
   final AuthService _authService = AuthService();
   bool _loading = false;
+  bool _submitted = false;
 
   
   // Initialize stars immediately
@@ -38,7 +43,69 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
     super.dispose();
+  }
+
+  bool get _canSubmit =>
+      !_loading &&
+      _emailController.text.trim().isNotEmpty &&
+      _passwordController.text.isNotEmpty;
+
+  String _friendlyAuthError(Object e) {
+    if (e is FirebaseAuthException) {
+      switch (e.code) {
+        case 'invalid-email':
+          return 'Please enter a valid email address.';
+        case 'user-not-found':
+          return 'No account found for that email.';
+        case 'wrong-password':
+          return 'Incorrect password. Please try again.';
+        case 'invalid-credential':
+          return 'Incorrect email or password.';
+        case 'user-disabled':
+          return 'This account has been disabled.';
+        case 'too-many-requests':
+          return 'Too many attempts. Please wait a bit and try again.';
+      }
+      return e.message ?? 'Login failed. Please try again.';
+    }
+    return 'Login failed. Please try again.';
+  }
+
+  Future<void> _handleLogin() async {
+    setState(() => _submitted = true);
+    final ok = _formKey.currentState?.validate() ?? false;
+    if (!ok) return;
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    FocusScope.of(context).unfocus();
+    setState(() => _loading = true);
+    try {
+      final user = await _authService.login(email, password);
+      if (!mounted) return;
+      setState(() => _loading = false);
+
+      if (user != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Login failed. Please try again.')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_friendlyAuthError(e))),
+      );
+    }
   }
 
   @override
@@ -122,115 +189,124 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                           ),
                         ],
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Welcome back',
-                            style: TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Sign in to continue',
-                            style: TextStyle(
-                              fontSize: 15,
-                              color: Colors.white.withOpacity(0.70),
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-
-                          _buildTextField(
-                            controller: _emailController,
-                            hint: 'Email',
-                            icon: Icons.email_outlined,
-                            keyboardType: TextInputType.emailAddress,
-                          ),
-                          const SizedBox(height: 20),
-
-                          _buildTextField(
-                            controller: _passwordController,
-                            hint: 'Password',
-                            icon: Icons.lock_outline,
-                            isPassword: true,
-                          ),
-                          const SizedBox(height: 12),
-
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () {},
-                              child: Text(
-                                'Forgot password?',
-                                style: TextStyle(
-                                  color: Colors.blue.shade300,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                      child: Form(
+                        key: _formKey,
+                        autovalidateMode: _submitted
+                            ? AutovalidateMode.onUserInteraction
+                            : AutovalidateMode.disabled,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Welcome back',
+                              style: TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
                               ),
                             ),
-                          ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Sign in to continue',
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Colors.white.withOpacity(0.70),
+                              ),
+                            ),
+                            const SizedBox(height: 32),
 
-                          const SizedBox(height: 24),
-
-                          SizedBox(
-                            width: double.infinity,
-                            height: 56,
-                            child: ElevatedButton(
-                              onPressed: _loading ? null : () async {
-                                final email = _emailController.text.trim();
-                                final password = _passwordController.text.trim();
-                                if (email.isEmpty || password.isEmpty) return;
-
-                                setState(() => _loading = true);
-                                final user = await _authService.login(email, password);
-                                if (mounted) setState(() => _loading = false);
-
-                                if (user != null) {
-                                  if (context.mounted) {
-                                    Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(builder: (_) => const HomeScreen()),
-                                    );
-                                  }
-                                } else {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Login failed. Please check credentials.')),
-                                    );
-                                  }
-                                }
+                            _buildTextField(
+                              controller: _emailController,
+                              hint: 'Email',
+                              icon: Icons.email_outlined,
+                              keyboardType: TextInputType.emailAddress,
+                              focusNode: _emailFocus,
+                              textInputAction: TextInputAction.next,
+                              onChanged: (_) => setState(() {}),
+                              onFieldSubmitted: (_) =>
+                                  FocusScope.of(context).requestFocus(_passwordFocus),
+                              validator: (v) {
+                                final value = (v ?? '').trim();
+                                if (value.isEmpty) return 'Email is required.';
+                                final ok = RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(value);
+                                if (!ok) return 'Enter a valid email.';
+                                return null;
                               },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: const Color(0xFFFD1D1D),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                            ),
+                            const SizedBox(height: 20),
+
+                            _buildTextField(
+                              controller: _passwordController,
+                              hint: 'Password',
+                              icon: Icons.lock_outline,
+                              isPassword: true,
+                              focusNode: _passwordFocus,
+                              textInputAction: TextInputAction.done,
+                              onChanged: (_) => setState(() {}),
+                              onFieldSubmitted: (_) => _canSubmit ? _handleLogin() : null,
+                              validator: (v) {
+                                final value = (v ?? '');
+                                if (value.isEmpty) return 'Password is required.';
+                                if (value.length < 6) return 'Password must be at least 6 characters.';
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 12),
+
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Password reset coming soon.')),
+                                  );
+                                },
+                                child: Text(
+                                  'Forgot password?',
+                                  style: TextStyle(
+                                    color: Colors.blue.shade300,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                               ),
-                              child: _loading 
-                                  ? const SizedBox(
-                                      height: 24, width: 24,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    )
-                                  : const Text(
-                                      'Login',
-                                      style: TextStyle(
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
                             ),
-                          ),
 
-                          const SizedBox(height: 32),
+                            const SizedBox(height: 24),
 
-                          // Social login
-                          
-                        ],
+                            SizedBox(
+                              width: double.infinity,
+                              height: 56,
+                              child: ElevatedButton(
+                                onPressed: _canSubmit ? _handleLogin : null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: const Color(0xFFFD1D1D),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                                child: _loading
+                                    ? const SizedBox(
+                                        height: 24,
+                                        width: 24,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : const Text(
+                                        'Login',
+                                        style: TextStyle(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 32),
+
+                            // Social login (later)
+                          ],
+                        ),
                       ),
                     ),
 
@@ -280,11 +356,21 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     required IconData icon,
     bool isPassword = false,
     TextInputType? keyboardType,
+    FocusNode? focusNode,
+    TextInputAction? textInputAction,
+    ValueChanged<String>? onChanged,
+    ValueChanged<String>? onFieldSubmitted,
+    FormFieldValidator<String>? validator,
   }) {
-    return TextField(
+    return TextFormField(
       controller: controller,
       obscureText: isPassword && !_isPasswordVisible,
       keyboardType: keyboardType,
+      focusNode: focusNode,
+      textInputAction: textInputAction,
+      onChanged: onChanged,
+      onFieldSubmitted: onFieldSubmitted,
+      validator: validator,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: hint,
@@ -305,6 +391,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
+        errorStyle: const TextStyle(color: Colors.white),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       ),
     );

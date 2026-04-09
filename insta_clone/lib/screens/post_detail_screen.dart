@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../models/post_model.dart';
 import '../services/like_service.dart';
 import 'comments_screen.dart';
+import 'package:flutter/services.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final PostModel post;
@@ -56,6 +57,7 @@ class _PostDetailScreenState extends State<PostDetailScreen>
     }
 
     await _likeService.toggleLike(_postId);
+    HapticFeedback.lightImpact();
     widget.onUpdated();
   }
 
@@ -72,13 +74,13 @@ class _PostDetailScreenState extends State<PostDetailScreen>
   }
 
   Future<void> _openComments() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => CommentsScreen(
-          post: widget.post,
-          onUpdated: widget.onUpdated,
-        ),
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => CommentsBottomSheet(
+        post: widget.post,
+        onUpdated: widget.onUpdated,
       ),
     );
 
@@ -210,12 +212,20 @@ class _PostDetailScreenState extends State<PostDetailScreen>
                       icon: const Icon(Icons.chat_bubble_outline, size: 28),
                     ),
                     IconButton(
-                      onPressed: () {}, // share functionality
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Share coming soon.')),
+                        );
+                      },
                       icon: const Icon(Icons.send_outlined, size: 28),
                     ),
                     const Spacer(),
                     IconButton(
-                      onPressed: () {}, // bookmark/save
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Save coming soon.')),
+                        );
+                      },
                       icon: const Icon(Icons.bookmark_border, size: 28),
                     ),
                   ],
