@@ -30,7 +30,7 @@ class CloudinaryUploadService {
     if (CLOUD_NAME == 'YOUR_CLOUDINARY_CLOUD_NAME') {
       throw Exception(
         "Cloudinary credentials not configured. "
-        "Replace CLOUD_NAME and UPLOAD_PRESET in cloudinary_upload_service.dart"
+        "Replace CLOUD_NAME and UPLOAD_PRESET in cloudinary_upload_service.dart",
       );
     }
 
@@ -65,7 +65,6 @@ class CloudinaryUploadService {
       print("✅ Post saved to Firestore");
 
       print("=== UPLOAD COMPLETE ===");
-
     } catch (e, stackTrace) {
       print("❌ UPLOAD FAILED");
       print("Error: $e");
@@ -96,13 +95,31 @@ class CloudinaryUploadService {
         return imageUrl;
       } else {
         throw Exception(
-          "Cloudinary upload failed: ${response.statusCode} - ${response.data}"
+          "Cloudinary upload failed: ${response.statusCode} - ${response.data}",
         );
       }
     } catch (e) {
       print("Cloudinary upload error: $e");
       rethrow;
     }
+  }
+
+  /// Upload a profile avatar to Cloudinary without saving extra Firestore data
+  Future<String> uploadProfileAvatar({
+    required File image,
+    required String publicId,
+  }) async {
+    if (CLOUD_NAME == 'YOUR_CLOUDINARY_CLOUD_NAME') {
+      throw Exception(
+        "Cloudinary credentials not configured. "
+        "Replace CLOUD_NAME and UPLOAD_PRESET in cloudinary_upload_service.dart",
+      );
+    }
+
+    print("Uploading profile avatar to Cloudinary...");
+    final imageUrl = await _uploadToCloudinary(image, publicId);
+    print("✅ Profile avatar uploaded: $imageUrl");
+    return imageUrl;
   }
 
   /// Test Cloudinary connection
@@ -112,7 +129,9 @@ class CloudinaryUploadService {
 
       if (CLOUD_NAME == 'YOUR_CLOUDINARY_CLOUD_NAME') {
         print("❌ Cloudinary not configured");
-        print("Please set CLOUD_NAME and UPLOAD_PRESET in cloudinary_upload_service.dart");
+        print(
+          "Please set CLOUD_NAME and UPLOAD_PRESET in cloudinary_upload_service.dart",
+        );
         return;
       }
 

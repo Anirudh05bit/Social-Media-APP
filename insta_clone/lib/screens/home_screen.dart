@@ -7,6 +7,7 @@ import 'edit_profile_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/focus_mode_service.dart';
 import 'focus_mode_screen.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -17,80 +18,77 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _index = 0;
   Future<void> _showFocusDialog() async {
-  final service = FocusModeService();
+    final service = FocusModeService();
 
-  showModalBottomSheet(
-    context: context,
-    builder: (_) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                "Start Focus Mode",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+    showModalBottomSheet(
+      context: context,
+      builder: (_) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  "Start Focus Mode",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-              ListTile(
-                title: const Text("15 minutes"),
-                onTap: () async {
-                  Navigator.pop(context);
-                  await service.enableForMinutes(15);
-                  if (!mounted) return;
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const FocusModeScreen(),
-                    ),
-                  );
-                  setState(() {});
-                },
-              ),
+                ListTile(
+                  title: const Text("15 minutes"),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await service.enableForMinutes(15);
+                    if (!mounted) return;
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const FocusModeScreen(),
+                      ),
+                    );
+                    setState(() {});
+                  },
+                ),
 
-              ListTile(
-                title: const Text("30 minutes"),
-                onTap: () async {
-                  Navigator.pop(context);
-                  await service.enableForMinutes(30);
-                  if (!mounted) return;
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const FocusModeScreen(),
-                    ),
-                  );
-                  setState(() {});
-                },
-              ),
+                ListTile(
+                  title: const Text("30 minutes"),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await service.enableForMinutes(30);
+                    if (!mounted) return;
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const FocusModeScreen(),
+                      ),
+                    );
+                    setState(() {});
+                  },
+                ),
 
-              ListTile(
-                title: const Text("60 minutes"),
-                onTap: () async {
-                  Navigator.pop(context);
-                  await service.enableForMinutes(60);
-                  if (!mounted) return;
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const FocusModeScreen(),
-                    ),
-                  );
-                  setState(() {});
-                },
-              ),
-            ],
+                ListTile(
+                  title: const Text("60 minutes"),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await service.enableForMinutes(60);
+                    if (!mounted) return;
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const FocusModeScreen(),
+                      ),
+                    );
+                    setState(() {});
+                  },
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
 
   void _onTabSelected(int index) {
     setState(() => _index = index);
@@ -105,11 +103,14 @@ class _HomeScreenState extends State<HomeScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFFFF9500),  // vibrant orange
-              const Color(0xFFFFAB76),  // warm peach
-              const Color(0xFFFFDAC1),  // soft coral
-            ].map((c) => c.withOpacity(0.08)).toList(),  // softer background opacity
+            colors:
+                [
+                      const Color(0xFFFF9500), // vibrant orange
+                      const Color(0xFFFFAB76), // warm peach
+                      const Color(0xFFFFDAC1), // soft coral
+                    ]
+                    .map((c) => c.withOpacity(0.08))
+                    .toList(), // softer background opacity
           ),
         ),
         child: SafeArea(
@@ -178,15 +179,15 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const Spacer(),
-           _buildAppBarIcon(Icons.self_improvement, () async {
+          _buildAppBarIcon(Icons.self_improvement, () async {
             // open a picker / enable focus
-                  await _showFocusDialog();
+            await _showFocusDialog();
           }),
           const SizedBox(width: 12),
           _buildAppBarIcon(Icons.favorite_border, () {}),
           const SizedBox(width: 12),
           _buildAppBarIcon(Icons.send_outlined, () {}),
-                  ],
+        ],
       ),
     );
   }
@@ -213,66 +214,66 @@ class _HomeScreenState extends State<HomeScreen> {
       child: _index == 0
           ? _buildFeedScreen()
           : _index == 1
-              ? _buildUploadScreen()
-              : _buildProfileScreen(),
+          ? _buildUploadScreen()
+          : _buildProfileScreen(),
     );
   }
 
   Widget _buildFeedScreen() {
-  return StreamBuilder(
-    stream: FeedService().getFeed(),
-    builder: (context, snapshot) {
-      if (snapshot.connectionState == ConnectionState.waiting) {
-        return const Center(child: CircularProgressIndicator());
-      }
+    return StreamBuilder(
+      stream: FeedService().getFeed(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-        return const Center(
-          child: Text(
-            "No posts yet",
-            style: TextStyle(fontSize: 18),
-          ),
-        );
-      }
-
-      final posts = snapshot.data!.docs.where((doc) {
-        final imageUrl = (doc['imageUrl'] ?? '').toString();
-        return imageUrl.isNotEmpty && !imageUrl.contains('firebasestorage.googleapis.com');
-      }).toList();
-
-      if (posts.isEmpty) {
-        return const Center(
-          child: Text(
-            "No Cloudinary posts yet",
-            style: TextStyle(fontSize: 18),
-          ),
-        );
-      }
-
-      return ListView.builder(
-        physics: const BouncingScrollPhysics(),
-        itemCount: posts.length,
-        itemBuilder: (context, index) {
-          final data = posts[index];
-
-          return _buildRealPostCard(
-            imageUrl: data['imageUrl'],
-            caption: data['caption'],
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(
+            child: Text("No posts yet", style: TextStyle(fontSize: 18)),
           );
-        },
-      );
-    },
-  );
-}
+        }
 
+        final posts = snapshot.data!.docs.where((doc) {
+          final imageUrl = (doc['imageUrl'] ?? '').toString();
+          return imageUrl.isNotEmpty &&
+              !imageUrl.contains('firebasestorage.googleapis.com');
+        }).toList();
+
+        if (posts.isEmpty) {
+          return const Center(
+            child: Text(
+              "No Cloudinary posts yet",
+              style: TextStyle(fontSize: 18),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          physics: const BouncingScrollPhysics(),
+          itemCount: posts.length,
+          itemBuilder: (context, index) {
+            final data = posts[index];
+
+            return _buildRealPostCard(
+               imageUrl: data['imageUrl'] ?? '',
+               caption: data['caption'] ?? '',
+               username: data['username'] ?? 'user',
+               postId: data['postId'] ?? '',
+               likeCount: (data['likeCount'] ?? 0) as int,
+            );
+          },
+        );
+      },
+    );
+  }
 
   Widget _buildStylishPostCard(int index) {
     final colors = [
-      [const Color(0xFFFF9500), const Color(0xFFFFAB76)],     // orange-peach
-      [const Color(0xFFFF6B6B), const Color(0xFFFFDAC1)],     // coral-soft
-      [const Color(0xFF34D399), const Color(0xFF6EE7B7)],     // mint-green happy
-      [const Color(0xFF60A5FA), const Color(0xFF93C5FD)],     // fresh blue
-      [const Color(0xFFFBBF24), const Color(0xFFFCD34D)],     // sunny yellow
+      [const Color(0xFFFF9500), const Color(0xFFFFAB76)], // orange-peach
+      [const Color(0xFFFF6B6B), const Color(0xFFFFDAC1)], // coral-soft
+      [const Color(0xFF34D399), const Color(0xFF6EE7B7)], // mint-green happy
+      [const Color(0xFF60A5FA), const Color(0xFF93C5FD)], // fresh blue
+      [const Color(0xFFFBBF24), const Color(0xFFFCD34D)], // sunny yellow
     ];
 
     return Container(
@@ -355,11 +356,20 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Row(
                   children: [
-                    _buildActionButton(Icons.favorite_border, '${(index + 1) * 42}'),
+                    _buildActionButton(
+                      Icons.favorite_border,
+                      '${(index + 1) * 42}',
+                    ),
                     const SizedBox(width: 16),
-                    _buildActionButton(Icons.chat_bubble_outline, '${(index + 1) * 8}'),
+                    _buildActionButton(
+                      Icons.chat_bubble_outline,
+                      '${(index + 1) * 8}',
+                    ),
                     const SizedBox(width: 16),
-                    _buildActionButton(Icons.send_outlined, '${(index + 1) * 3}'),
+                    _buildActionButton(
+                      Icons.send_outlined,
+                      '${(index + 1) * 3}',
+                    ),
                     const Spacer(),
                     Icon(Icons.bookmark_border, color: Colors.grey.shade800),
                   ],
@@ -397,93 +407,102 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
     );
   }
+
   Widget _buildRealPostCard({
-  required String imageUrl,
-  required String caption,
-}) {
-  return Container(
-    margin: const EdgeInsets.only(bottom: 24),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(24),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.06),
-          blurRadius: 20,
-          offset: const Offset(0, 8),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ListTile(
-          leading: const CircleAvatar(
-            child: Icon(Icons.person),
+    required String imageUrl,
+    required String caption,
+    required String username,
+    required String postId,
+    required int likeCount,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
-          title: const Text("User"),
-          subtitle: const Text("Just now"),
-          trailing: const Icon(Icons.more_vert),
-        ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListTile(
+            leading: const CircleAvatar(child: Icon(Icons.person)),
+            title: const Text("User"),
+            subtitle: const Text("Just now"),
+            trailing: const Icon(Icons.more_vert),
+          ),
 
-        AspectRatio(
-          aspectRatio: 1,
-          child: imageUrl.isEmpty
-              ? Container(
-                  color: Colors.grey.shade200,
-                  child: const Center(
-                    child: Icon(Icons.image_not_supported, size: 40, color: Colors.grey),
-                  ),
-                )
-              : Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loading) {
-                    if (loading == null) return child;
-                    return const Center(child: CircularProgressIndicator());
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    print('❌ Error loading image: $error');
-                    final errorMessage = error.toString();
-                    final isFirebaseError = errorMessage.contains('firebasestorage.googleapis.com') || 
-                                           errorMessage.contains('412') ||
-                                           errorMessage.contains('Precondition Failed');
-                    
-                    return Container(
-                      color: Colors.grey.shade200,
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.broken_image, size: 40, color: Colors.grey),
-                            const SizedBox(height: 8),
-                            Text(
-                              isFirebaseError 
-                                ? 'Image storage expired - please re-upload'
-                                : 'Failed to load image', 
-                              style: const TextStyle(color: Colors.grey),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
+          AspectRatio(
+            aspectRatio: 1,
+            child: imageUrl.isEmpty
+                ? Container(
+                    color: Colors.grey.shade200,
+                    child: const Center(
+                      child: Icon(
+                        Icons.image_not_supported,
+                        size: 40,
+                        color: Colors.grey,
                       ),
-                    );
-                  },
-                ),
-        ),
+                    ),
+                  )
+                : Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loading) {
+                      if (loading == null) return child;
+                      return const Center(child: CircularProgressIndicator());
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      print('❌ Error loading image: $error');
+                      final errorMessage = error.toString();
+                      final isFirebaseError =
+                          errorMessage.contains(
+                            'firebasestorage.googleapis.com',
+                          ) ||
+                          errorMessage.contains('412') ||
+                          errorMessage.contains('Precondition Failed');
 
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text(
-            caption,
-            style: const TextStyle(fontSize: 15),
+                      return Container(
+                        color: Colors.grey.shade200,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.broken_image,
+                                size: 40,
+                                color: Colors.grey,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                isFirebaseError
+                                    ? 'Image storage expired - please re-upload'
+                                    : 'Failed to load image',
+                                style: const TextStyle(color: Colors.grey),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
-        ),
-      ],
-    ),
-  );
-}
 
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(caption, style: const TextStyle(fontSize: 15)),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildUploadScreen() {
     return Center(
@@ -495,10 +514,7 @@ class _HomeScreenState extends State<HomeScreen> {
             duration: const Duration(milliseconds: 600),
             curve: Curves.elasticOut,
             builder: (context, value, child) {
-              return Transform.scale(
-                scale: 0.8 + (0.2 * value),
-                child: child,
-              );
+              return Transform.scale(scale: 0.8 + (0.2 * value), child: child);
             },
             child: Container(
               width: 200,
@@ -506,7 +522,11 @@ class _HomeScreenState extends State<HomeScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: const LinearGradient(
-                  colors: [Color(0xFFFF9500), Color(0xFFFFAB76), Color(0xFFFF6B6B)],
+                  colors: [
+                    Color(0xFFFF9500),
+                    Color(0xFFFFAB76),
+                    Color(0xFFFF6B6B),
+                  ],
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -516,7 +536,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              child: const Icon(Icons.add_photo_alternate, size: 80, color: Colors.white),
+              child: const Icon(
+                Icons.add_photo_alternate,
+                size: 80,
+                color: Colors.white,
+              ),
             ),
           ),
           const SizedBox(height: 32),
@@ -531,10 +555,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 12),
           Text(
             'Share your moments with the world',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey.shade600,
-            ),
+            style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
           ),
         ],
       ),
@@ -542,120 +563,187 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildProfileScreen() {
-  final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
-  if (uid == null) {
-    return const Center(child: Text("User not logged in"));
-  }
+    if (uid == null) {
+      return const Center(child: Text("User not logged in"));
+    }
 
-  return FutureBuilder(
-    future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
-    builder: (context, snapshot) {
-      if (snapshot.connectionState == ConnectionState.waiting) {
-        return const Center(child: CircularProgressIndicator());
-      }
+    return FutureBuilder(
+      future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-      if (!snapshot.hasData || !snapshot.data!.exists) {
-        return const Center(child: Text("No profile data found"));
-      }
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return const Center(child: Text("No profile data found"));
+        }
 
-      final data = snapshot.data!.data() as Map<String, dynamic>;
+        final data = snapshot.data!.data() as Map<String, dynamic>;
 
-      final username = data['username'] ?? 'Your Name';
-      final bio = data['bio'] ?? '';
-      final photoUrl = data['photoUrl'];
+        final username = data['username'] ?? 'Your Name';
+        final bio = data['bio'] ?? '';
+        final photoUrl = data['photoUrl'];
 
-      return SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
 
-            // PROFILE IMAGE
-            CircleAvatar(
-              radius: 60,
-              backgroundColor: Colors.grey.shade200,
-              backgroundImage: photoUrl != null && photoUrl != ""
-                  ? NetworkImage(photoUrl)
-                  : null,
-              child: photoUrl == null || photoUrl == ""
-                  ? const Icon(Icons.person, size: 60)
-                  : null,
-            ),
-
-            const SizedBox(height: 20),
-
-            // USERNAME
-            Text(
-              username,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
+              // PROFILE IMAGE
+              CircleAvatar(
+                radius: 60,
+                backgroundColor: Colors.grey.shade200,
+                backgroundImage: photoUrl != null && photoUrl != ""
+                    ? NetworkImage(photoUrl)
+                    : null,
+                child: photoUrl == null || photoUrl == ""
+                    ? const Icon(Icons.person, size: 60)
+                    : null,
               ),
-            ),
 
-            const SizedBox(height: 8),
+              const SizedBox(height: 20),
 
-            // BIO
-            if (bio.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40),
-                child: Text(
-                  bio,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade700,
-                  ),
+              // USERNAME
+              Text(
+                username,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 8),
 
-            // EDIT PROFILE BUTTON
-            InkWell(
-              borderRadius: BorderRadius.circular(25),
-              onTap: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const EditProfileScreen(),
-                  ),
-                );
-
-                setState(() {}); // refresh after returning
-              },
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 40),
-                height: 50,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFF9500), Color(0xFFFFAB76)],
-                  ),
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: const Center(
+              // BIO
+              if (bio.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
                   child: Text(
-                    'Edit Profile',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                    bio,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+                  ),
+                ),
+
+              const SizedBox(height: 24),
+
+              // EDIT PROFILE BUTTON
+              InkWell(
+                borderRadius: BorderRadius.circular(25),
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const EditProfileScreen(),
+                    ),
+                  );
+
+                  setState(() {}); // refresh after returning
+                },
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 40),
+                  height: 50,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFF9500), Color(0xFFFFAB76)],
+                    ),
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'Edit Profile',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
 
-            const SizedBox(height: 32),
+              const SizedBox(height: 32),
 
-            _buildProfileGrid(),
-          ],
-        ),
-      );
-    },
-  );
-}
+              _buildProfileGrid(uid),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileGrid(String uid) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance
+          .collection('posts')
+          .where('uid', isEqualTo: uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: Text('No posts yet')),
+          );
+        }
+
+        final posts = snapshot.data!.docs.where((doc) {
+          final imageUrl = (doc.data()['imageUrl'] ?? '').toString();
+          return imageUrl.isNotEmpty &&
+              !imageUrl.contains('firebasestorage.googleapis.com');
+        }).toList();
+
+        if (posts.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: Text('No Cloudinary posts yet')),
+          );
+        }
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(2),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 2,
+            mainAxisSpacing: 2,
+          ),
+          itemCount: posts.length,
+          itemBuilder: (context, index) {
+            final postData = posts[index].data();
+            final imageUrl = (postData['imageUrl'] ?? '').toString();
+
+            return Container(
+              color: Colors.grey.shade200,
+              child: imageUrl.isEmpty
+                  ? const Center(child: Icon(Icons.broken_image))
+                  : Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loading) {
+                        if (loading == null) return child;
+                        return const Center(child: CircularProgressIndicator());
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Center(child: Icon(Icons.broken_image));
+                      },
+                    ),
+            );
+          },
+        );
+      },
+    );
+  }
 
   Widget _buildStatCard(String label, String value) {
     return Container(
@@ -675,65 +763,22 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey.shade600,
-            ),
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildProfileGrid() {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(2),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 2,
-        mainAxisSpacing: 2,
-      ),
-      itemCount: 12,
-      itemBuilder: (context, index) {
-        final colors = [
-          [const Color(0xFFFF9500), const Color(0xFFFFAB76)],
-          [const Color(0xFFFF6B6B), const Color(0xFFFFDAC1)],
-          [const Color(0xFF34D399), const Color(0xFF6EE7B7)],
-          [const Color(0xFFFBBF24), const Color(0xFFFCD34D)],
-        ];
-
-        return Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: colors[index % colors.length],
-            ),
-          ),
-          child: Center(
-            child: Icon(
-              Icons.image,
-              color: Colors.white.withOpacity(0.75),
-              size: 40,
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   Widget _buildStylishBottomNav() {
     return Container(
-      margin: const EdgeInsets.all(20),
-      height: 70,
+      margin: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+      height: 64,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(35),
@@ -787,32 +832,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildStylishFAB() {
     return GestureDetector(
-    onTap: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const UploadPostScreen(),
-        ),
-      );
-    },
-    child: Container(
-      width: 70,
-      height: 70,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFF9500), Color(0xFFFFAB76), Color(0xFFFF6B6B)],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFFF9500).withOpacity(0.45),
-            blurRadius: 25,
-            offset: const Offset(0, 12),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const UploadPostScreen()),
+        );
+      },
+      child: Container(
+        width: 70,
+        height: 70,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: const LinearGradient(
+            colors: [Color(0xFFFF9500), Color(0xFFFFAB76), Color(0xFFFF6B6B)],
           ),
-        ],
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFF9500).withOpacity(0.45),
+              blurRadius: 25,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: const Icon(Icons.camera_alt, color: Colors.white, size: 32),
       ),
-      child: const Icon(Icons.camera_alt, color: Colors.white, size: 32),
-    ),
-  );
+    );
   }
 }
