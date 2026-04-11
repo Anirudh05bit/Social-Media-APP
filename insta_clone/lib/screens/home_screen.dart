@@ -164,10 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _buildAppBarIcon(Icons.self_improvement, () async {
             await _showFocusDialog();
           }),
-          const SizedBox(width: 12),
-          _buildAppBarIcon(Icons.favorite_border, () {}),
-          const SizedBox(width: 12),
-          _buildAppBarIcon(Icons.send_outlined, () {}),
+
         ],
       ),
     );
